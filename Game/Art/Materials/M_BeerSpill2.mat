@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_BeerSpill2
+  m_Shader: {fileID: 4800000, guid: c992955ad3b2bd8459c85f4cf96604fa, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _FoamAmount: 0.65
+    - _FoamClumpSize: 14.13
+    - _FoamDriftSpeed: 0.25
+    - _FoamWidth: 0.068
+    - _GlintPulseSpeed: 1.2
+    - _PuddleRadius: 0.329
+    - _Seed: 0
+    - _Smoothness: 1
+    - _SplashDistortion: 0.195
+    - _SplashScale: 3.31
+    - _SplashWarp: 0.336
+    - _WiggleIntensity: 0.012
+    - _WiggleSpeed: 0.65
+    m_Colors:
+    - _BeerColor: {r: 0.9607843, g: 0.6509804, b: 0.13725491, a: 0.8509804}
+    - _DeepColor: {r: 0.92156863, g: 0.5803922, b: 0.12156863, a: 1}
+    - _FoamColor: {r: 1, g: 0.972549, b: 0.90588236, a: 0.9490196}
+    - _GlossColor: {r: 1, g: 1, b: 1, a: 0.9}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
