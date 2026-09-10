@@ -28,7 +28,7 @@ public class PuddleManager : MonoBehaviour
     /// <summary>
     /// Spawns a puddle or merges into an existing nearby puddle.
     /// </summary>
-    public void SpillBeer(Vector3 worldPosition, float pints)
+    public void SpillBeer(Vector3 worldPosition, float pints, CustomerOrder customerSource = null)
     {
         if (pints < minSpillThreshold) return;
 
@@ -59,6 +59,7 @@ public class PuddleManager : MonoBehaviour
             if (bestPuddle != null)
             {
                 bestPuddle.AddBeer(pints);
+                bestPuddle.AddSlipImmuneCustomer(customerSource);
                 return;
             }
 
@@ -71,6 +72,7 @@ public class PuddleManager : MonoBehaviour
 
                 if (newPuddle.TryGetComponent(out BeerPuddle puddle))
                 {
+                    puddle.AddSlipImmuneCustomer(customerSource);
                     // If you want pints to dictate the exact start volume rather than adding to the prefab default:
                     puddle.AddBeer(pints);
                 }

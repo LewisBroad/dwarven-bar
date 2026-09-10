@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody), typeof(Collider))]
-public class PhysicsItem : MonoBehaviour
+public class PhysicsItem : NetworkBehaviour
 {
     [System.Serializable]
     public class GrabInstance

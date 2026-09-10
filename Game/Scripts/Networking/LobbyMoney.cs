@@ -27,6 +27,7 @@ public class LobbyMoney : NetworkBehaviour
         // has been started. Network spawning will take ownership once it begins.
         if (!IsSpawned)
         {
+            Instance = this;
             Balance.Value = startingBalance;
             LobbyMoneyHud.ShowFor(this);
         }
@@ -71,6 +72,19 @@ public class LobbyMoney : NetworkBehaviour
         if ((IsSpawned && !IsServer) || amount <= 0) return false;
 
         Balance.Value += amount;
+        if (!IsSpawned) BalanceChanged?.Invoke(Balance.Value);
+        return true;
+    }
+
+    /// <summary>
+    /// Immediately spends money in offline/host play. Network clients will use a
+    /// server-confirmed purchase flow once the shop itself is network-spawned.
+    /// </summary>
+    public bool TrySpendMoney(int amount)
+    {
+        if ((IsSpawned && !IsServer) || amount <= 0 || Balance.Value < amount) return false;
+
+        Balance.Value -= amount;
         if (!IsSpawned) BalanceChanged?.Invoke(Balance.Value);
         return true;
     }

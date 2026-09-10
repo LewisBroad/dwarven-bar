@@ -21,6 +21,9 @@ public class Mop : PhysicsItem, IMappableTool, IInteractable
     [SerializeField] private string droppedLayerName = "Interactable";
 
     private bool _isEquipped = false;
+    private Transform _equippedSocket;
+    private Vector3 _equippedLocalPosition;
+    private Quaternion _equippedLocalRotation;
     private Rigidbody _rb;
     private Collider _col;
     private InteractableHighlight _highlighter;
@@ -48,20 +51,14 @@ public class Mop : PhysicsItem, IMappableTool, IInteractable
         _rb.isKinematic = true;
         _col.enabled = false;
 
-        // Parent to socket
-        transform.SetParent(socket);
-
-        // Apply perspective-specific local transforms
-        if (isFirstPerson)
-        {
-            transform.localPosition = fpLocalPosition;
-            transform.localRotation = Quaternion.Euler(fpLocalRotation);
-        }
-        else
-        {
-            transform.localPosition = tpLocalPosition;
-            transform.localRotation = Quaternion.Euler(tpLocalRotation);
-        }
+        // A NetworkObject cannot safely be parented to a regular hand/camera bone.
+        // Keep it unparented and follow the socket in world space, just like a
+        // customer-held glass. This avoids Netcode resetting it to world origin.
+        _equippedSocket = socket;
+        _equippedLocalPosition = isFirstPerson ? fpLocalPosition : tpLocalPosition;
+        _equippedLocalRotation = Quaternion.Euler(isFirstPerson ? fpLocalRotation : tpLocalRotation);
+        transform.SetParent(null, true);
+        SnapToEquippedSocket();
 
         // Apply layer recursively so visibility matches owner settings
         SetLayerRecursively(gameObject, targetLayer);
@@ -70,7 +67,7 @@ public class Mop : PhysicsItem, IMappableTool, IInteractable
     public void OnUnequip()
     {
         _isEquipped = false;
-        transform.SetParent(null);
+        _equippedSocket = null;
         _rb.isKinematic = false;
         _col.enabled = true;
 
@@ -88,6 +85,19 @@ public class Mop : PhysicsItem, IMappableTool, IInteractable
 
         // Toss forward slightly when dropped
         _rb.linearVelocity = transform.forward * 2f + Vector3.up * 2f;
+    }
+
+    private void LateUpdate()
+    {
+        if (_isEquipped) SnapToEquippedSocket();
+    }
+
+    private void SnapToEquippedSocket()
+    {
+        if (_equippedSocket == null) return;
+        transform.SetPositionAndRotation(
+            _equippedSocket.TransformPoint(_equippedLocalPosition),
+            _equippedSocket.rotation * _equippedLocalRotation);
     }
 
     private void SetLayerRecursively(GameObject obj, int newLayer)

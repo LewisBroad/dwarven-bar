@@ -1,13 +1,26 @@
+using Unity.Netcode;
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody), typeof(Collider))]
+[RequireComponent(typeof(Rigidbody), typeof(Collider), typeof(NetworkObject))]
 public class PintGlass : PhysicsItem
 {
     [Header("Glass & Liquid Stats")]
     [Range(0f, 1f)] public float fillAmount = 1f;
     public string beerType = "Standard Ale";
-    public bool isClean = true;
+    [SerializeField] private bool startsClean = true;
     public bool isUnbreakable = false;
+
+    [Header("Cleanliness")]
+    [Tooltip("The renderer for the physical glass, not the LiquidVisual child.")]
+    [SerializeField] private Renderer glassRenderer;
+    [Tooltip("Optional. If omitted, the glass renderer's starting material is used when clean.")]
+    [SerializeField] private Material cleanGlassMaterial;
+    [Tooltip("A stained/foggy version of the glass material used after a customer drinks from it.")]
+    [SerializeField] private Material dirtyGlassMaterial;
+    public DwarvenDishwasher DockedDishwasher { get; private set; }
+    private readonly NetworkVariable<bool> _networkIsClean = new(true);
+    private bool _offlineIsClean;
+    public bool IsClean => IsSpawned ? _networkIsClean.Value : _offlineIsClean;
 
     [Header("Puddle Spawning & Throttling")]
     [Tooltip("Minimum seconds between puddle drops/expansions from this glass")]
@@ -70,6 +83,7 @@ public class PintGlass : PhysicsItem
     protected override void Awake()
     {
         base.Awake();
+        _offlineIsClean = startsClean;
         SetMass(0.4f);
 
         Rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
@@ -86,7 +100,22 @@ public class PintGlass : PhysicsItem
             }
         }
 
+        if (glassRenderer == null)
+        {
+            foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer != liquidRenderer)
+                {
+                    glassRenderer = renderer;
+                    break;
+                }
+            }
+        }
+        if (cleanGlassMaterial == null && glassRenderer != null)
+            cleanGlassMaterial = glassRenderer.sharedMaterial;
+
         UpdateLiquidVisual();
+        UpdateCleanlinessVisual();
     }
 
     private void OnValidate()
@@ -99,6 +128,7 @@ public class PintGlass : PhysicsItem
 
     public override bool OnGrab(Transform cameraTransform, Vector3 worldHitPoint, Collider playerCollider, DwarfGrabber grabber)
     {
+        if (DockedDishwasher != null && !DockedDishwasher.TryReleaseGlass(this)) return false;
         bool grabbed = base.OnGrab(cameraTransform, worldHitPoint, playerCollider, grabber);
         if (grabbed && _activeGrabs.Count > 0)
         {
@@ -109,6 +139,60 @@ public class PintGlass : PhysicsItem
         }
         return grabbed;
     }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        if (IsServer) _networkIsClean.Value = startsClean;
+        _networkIsClean.OnValueChanged += OnCleanlinessChanged;
+        UpdateCleanlinessVisual();
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        _networkIsClean.OnValueChanged -= OnCleanlinessChanged;
+        base.OnNetworkDespawn();
+    }
+
+    public void MakeDirty()
+    {
+        if (IsSpawned && !IsServer) return;
+        fillAmount = 0f;
+        beerType = string.Empty;
+        SetCleanState(false);
+        UpdateLiquidVisual();
+        UpdateCleanlinessVisual();
+    }
+
+    public void Clean()
+    {
+        if (IsSpawned && !IsServer) return;
+        fillAmount = 0f;
+        beerType = string.Empty;
+        SetCleanState(true);
+        UpdateLiquidVisual();
+        UpdateCleanlinessVisual();
+    }
+
+    public void SetDockedDishwasher(DwarvenDishwasher dishwasher)
+    {
+        DockedDishwasher = dishwasher;
+    }
+
+    private void UpdateCleanlinessVisual()
+    {
+        if (glassRenderer == null) return;
+        Material targetMaterial = IsClean ? cleanGlassMaterial : dirtyGlassMaterial;
+        if (targetMaterial != null) glassRenderer.sharedMaterial = targetMaterial;
+    }
+
+    private void SetCleanState(bool clean)
+    {
+        if (IsSpawned) _networkIsClean.Value = clean;
+        else _offlineIsClean = clean;
+    }
+
+    private void OnCleanlinessChanged(bool previousValue, bool newValue) => UpdateCleanlinessVisual();
 
     public override void OnRelease(Collider playerCollider, DwarfGrabber grabber)
     {

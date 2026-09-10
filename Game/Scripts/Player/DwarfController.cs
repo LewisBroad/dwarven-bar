@@ -85,6 +85,14 @@ public class DwarfController : MonoBehaviour
 
     private void Update()
     {
+        if (MagicOrderBookUI.IsOpen || (QuotaGameManager.Instance != null && QuotaGameManager.Instance.IsInputLocked))
+        {
+            _moveInput = Vector2.zero;
+            _lookInput = Vector2.zero;
+            CurrentHorizontalSpeed = 0f;
+            return;
+        }
+
         _isGrounded = _controller.isGrounded;
 
         if (_isGrounded)

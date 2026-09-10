@@ -114,6 +114,10 @@ public class DwarfRagdoll : MonoBehaviour
     {
         if (IsRagdolled) return;
 
+        // A ragdoll changes the camera holder and disables the controller, so the
+        // book must always restore its normal camera state before the tumble starts.
+        MagicOrderBookUI.ForceClose(immediate: true);
+
         if (_ragdollRoutine != null) StopCoroutine(_ragdollRoutine);
         _ragdollRoutine = StartCoroutine(RagdollRoutine(impactForce, duration));
     }

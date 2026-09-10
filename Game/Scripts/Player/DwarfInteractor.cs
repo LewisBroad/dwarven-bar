@@ -36,6 +36,12 @@ public class DwarfInteractor : MonoBehaviour
 
     private void Update()
     {
+        if (MagicOrderBookUI.IsOpen || (QuotaGameManager.Instance != null && QuotaGameManager.Instance.IsInputLocked))
+        {
+            ClearCurrentHover();
+            return;
+        }
+
         CheckForInteractable();
     }
 
@@ -100,6 +106,8 @@ public class DwarfInteractor : MonoBehaviour
 
     private void TryInteract()
     {
+        if (MagicOrderBookUI.IsOpen || (QuotaGameManager.Instance != null && QuotaGameManager.Instance.IsInputLocked)) return;
+
         if (_currentHovered != null)
         {
             _currentHovered.Interact(this);

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Trigger placed on the bar where a waiting customer receives an order.</summary>
@@ -5,8 +6,14 @@ using UnityEngine;
 public class CustomerServingSpot : MonoBehaviour
 {
     [SerializeField] private Transform customerWaitPoint;
+    [Header("Queue")]
+    [SerializeField] private Transform queueAnchor;
+    [SerializeField, Min(0.1f)] private float queueSpacing = 1.2f;
 
-    public CustomerOrder CurrentCustomer { get; private set; }
+    private readonly List<CustomerOrder> _queue = new();
+
+    public CustomerOrder CurrentCustomer => _queue.Count > 0 ? _queue[0] : null;
+    public int QueueCount => _queue.Count;
     public Transform CustomerWaitPoint => customerWaitPoint != null ? customerWaitPoint : transform;
 
     private void Awake()
@@ -14,16 +21,28 @@ public class CustomerServingSpot : MonoBehaviour
         GetComponent<Collider>().isTrigger = true;
     }
 
-    public bool Claim(CustomerOrder customer)
+    public void JoinQueue(CustomerOrder customer)
     {
-        if (customer == null || (CurrentCustomer != null && CurrentCustomer != customer)) return false;
-        CurrentCustomer = customer;
-        return true;
+        if (customer != null && !_queue.Contains(customer)) _queue.Add(customer);
     }
 
     public void Release(CustomerOrder customer)
     {
-        if (CurrentCustomer == customer) CurrentCustomer = null;
+        _queue.Remove(customer);
+    }
+
+    public bool IsFrontOfQueue(CustomerOrder customer)
+    {
+        return CurrentCustomer == customer;
+    }
+
+    public Vector3 GetQueuePosition(CustomerOrder customer)
+    {
+        int queueIndex = _queue.IndexOf(customer);
+        if (queueIndex < 0) queueIndex = 0;
+
+        Transform anchor = queueAnchor != null ? queueAnchor : CustomerWaitPoint;
+        return anchor.position - anchor.forward * (queueIndex * queueSpacing);
     }
 
     private void OnTriggerEnter(Collider other) => TryServe(other);

@@ -212,7 +212,8 @@ public class BeerTap : MonoBehaviour, IInteractable
 
             foreach (var g in caughtGlasses)
             {
-                g.PourBeer(beerType, splitAmount);
+                // A dirty customer glass must be washed before it can be used again.
+                if (g.IsClean) g.PourBeer(beerType, splitAmount);
             }
         }
         else

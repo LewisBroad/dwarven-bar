@@ -28,11 +28,15 @@ public class BeerPuddle : MonoBehaviour
     [SerializeField] private float slipImpulseForce = 8.0f;
     [SerializeField] private float ragdollDuration = 1.6f;
     [SerializeField] private float perPlayerSlipCooldown = 2.5f;
+    [Tooltip("Customers commonly walk more slowly than players, so this is intentionally lower.")]
+    [SerializeField] private float customerSlipSpeedThreshold = 0.8f;
 
     [Header("Audio")]
     [SerializeField] private AudioSource slipAudio;
 
     private readonly Dictionary<int, float> _playerCooldowns = new Dictionary<int, float>();
+    private readonly Dictionary<int, float> _customerCooldowns = new Dictionary<int, float>();
+    private readonly HashSet<CustomerOrder> _slipImmuneCustomers = new HashSet<CustomerOrder>();
     private CapsuleCollider _triggerCollider;
 
     private float _targetRadius;
@@ -44,6 +48,12 @@ public class BeerPuddle : MonoBehaviour
 
     public float CurrentVolume => currentVolumePints;
     public bool IsBeingAbsorbed => _isBeingAbsorbed;
+
+    /// <summary>Customers that created/contributed to this puddle do not slip on it.</summary>
+    public void AddSlipImmuneCustomer(CustomerOrder customer)
+    {
+        if (customer != null) _slipImmuneCustomers.Add(customer);
+    }
 
     private void Awake()
     {
@@ -91,6 +101,10 @@ public class BeerPuddle : MonoBehaviour
         {
             transform.position = Vector3.SmoothDamp(transform.position, _targetPosition, ref _positionVelocity, expansionDampTime);
         }
+
+        // NavMeshAgents often have no Rigidbody, so Unity trigger callbacks are not
+        // guaranteed for them. Actively sample the shallow puddle area instead.
+        CheckCustomersStandingInPuddle();
     }
 
     public void AddBeer(float pints)
@@ -172,6 +186,9 @@ public class BeerPuddle : MonoBehaviour
 
     private void AbsorbPuddle(BeerPuddle other)
     {
+        foreach (CustomerOrder customer in other._slipImmuneCustomers)
+            if (customer != null) _slipImmuneCustomers.Add(customer);
+
         float totalVol = currentVolumePints + other.currentVolumePints;
         float weightOther = other.currentVolumePints / totalVol;
         _targetPosition = Vector3.Lerp(transform.position, other.transform.position, weightOther * 0.6f);
@@ -225,7 +242,11 @@ public class BeerPuddle : MonoBehaviour
         if (_isBeingAbsorbed) return;
 
         DwarfController dwarf = other.GetComponentInParent<DwarfController>();
-        if (dwarf == null) return;
+        if (dwarf == null)
+        {
+            TrySlipCustomer(other);
+            return;
+        }
 
         int dwarfId = dwarf.gameObject.GetInstanceID();
 
@@ -278,6 +299,40 @@ public class BeerPuddle : MonoBehaviour
 
         _playerCooldowns[dwarfId] = Time.time;
         ExecuteSlip(dwarf, slipDirection * dwarfSpeed);
+
+        return;
+    }
+
+    private void OnTriggerEnter(Collider other) => TrySlipCustomer(other);
+
+    private void CheckCustomersStandingInPuddle()
+    {
+        if (_triggerCollider == null) return;
+        Vector3 center = transform.TransformPoint(_triggerCollider.center);
+        Collider[] overlaps = Physics.OverlapCapsule(
+            center - Vector3.up * (_triggerCollider.height * 0.35f),
+            center + Vector3.up * (_triggerCollider.height * 0.35f),
+            _triggerCollider.radius,
+            ~0,
+            QueryTriggerInteraction.Collide);
+
+        foreach (Collider overlap in overlaps) TrySlipCustomer(overlap);
+    }
+
+    private void TrySlipCustomer(Collider other)
+    {
+        if (_isBeingAbsorbed) return;
+        CustomerOrder customer = other.GetComponentInParent<CustomerOrder>();
+        if (customer == null || _slipImmuneCustomers.Contains(customer) || customer.IsSlipping) return;
+
+        int customerId = customer.GetInstanceID();
+        if (_customerCooldowns.TryGetValue(customerId, out float lastSlip)
+            && Time.time < lastSlip + perPlayerSlipCooldown) return;
+
+        if (customer.CurrentMoveSpeed < customerSlipSpeedThreshold) return;
+        _customerCooldowns[customerId] = Time.time;
+        Vector3 direction = customer.transform.forward;
+        customer.SlipOnPuddle(direction * Mathf.Max(customer.CurrentMoveSpeed, 1f), ragdollDuration);
     }
 
     private void ExecuteSlip(DwarfController dwarf, Vector3 horizontalVel)

@@ -65,6 +65,8 @@ public class DwarfGrabber : MonoBehaviour
 
     private void Update()
     {
+        if (MagicOrderBookUI.IsOpen || (QuotaGameManager.Instance != null && QuotaGameManager.Instance.IsInputLocked)) return;
+
         if (_currentHeldItem != null)
         {
             if (Mathf.Abs(_scrollInput) > 0.001f)
@@ -107,6 +109,8 @@ public class DwarfGrabber : MonoBehaviour
 
     private void OnAttackInput()
     {
+        if (MagicOrderBookUI.IsOpen || (QuotaGameManager.Instance != null && QuotaGameManager.Instance.IsInputLocked)) return;
+
         if (_currentEquippedTool != null)
         {
             // Use the equipped tool (e.g. swing mop)
