@@ -93,6 +93,9 @@ public class QuotaGameManager : NetworkBehaviour
     {
         if (_wallet == null) BindWallet();
         if (customerManager == null) customerManager = CustomerManager.Instance;
+        // In editor/offline play there is no server clock. Advance this local clock
+        // at one real second per in-game minute so the debug display ticks once/sec.
+        if (!IsSpawned && State == DayState.Open) _offlineElapsedSeconds += Time.deltaTime;
         if (IsGameAuthority && State == DayState.Open && ElapsedDaySeconds >= DayDurationSeconds) BeginLastCall();
         UpdateLighting();
         UpdateDisplays();

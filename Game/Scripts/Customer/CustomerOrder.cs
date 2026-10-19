@@ -34,6 +34,10 @@ public class CustomerOrder : NetworkBehaviour
     [SerializeField] private NavMeshAgent agent;
     [SerializeField] private bool destroyAfterLeaving = true;
 
+    [Header("Combat Hitbox")]
+    [Tooltip("A trigger collider kept active while the ragdoll bone colliders are disabled, so customers can be hit again after recovery.")]
+    [SerializeField] private CapsuleCollider combatHitbox;
+
     [Header("Served Drink")]
     [Tooltip("Optional child transform on the customer, normally positioned at their hand.")]
     [SerializeField] private Transform drinkSocket;
@@ -78,6 +82,7 @@ public class CustomerOrder : NetworkBehaviour
     private void Awake()
     {
         if (agent == null) agent = GetComponent<NavMeshAgent>();
+        EnsureCombatHitbox();
     }
 
     private void Start()
@@ -351,7 +356,7 @@ public class CustomerOrder : NetworkBehaviour
     /// <summary>Called by BeerPuddle. The host owns the customer state transition.</summary>
     public void SlipOnPuddle(Vector3 force, float ragdollDuration)
     {
-        if ((IsSpawned && !IsServer) || _isSlipping || _isLeaving) return;
+        if ((IsSpawned && !IsServer) || _isLeaving) return;
         _isSlipping = true;
         bool hadAlreadyOrdered = _hasBeenPaid;
 
@@ -363,6 +368,46 @@ public class CustomerOrder : NetworkBehaviour
         else
         {
             StartCoroutine(RecoverFromSlipAfterDelay(hadAlreadyOrdered, ragdollDuration));
+        }
+    }
+
+    /// <summary>Bat strikes use the same leave/free-pint rule, including after recovery.</summary>
+    public void HitByBat(Vector3 force, float ragdollDuration)
+    {
+        if ((IsSpawned && !IsServer)) return;
+
+        // A customer who is already walking out cannot order again, but may still
+        // be knocked down again while leaving the tavern.
+        if (_isLeaving)
+        {
+            CustomerRagdoll leavingRagdoll = GetComponent<CustomerRagdoll>();
+            if (leavingRagdoll != null) leavingRagdoll.TriggerRagdoll(force, ragdollDuration, ResumeLeavingAfterHit);
+            return;
+        }
+
+        SlipOnPuddle(force, ragdollDuration);
+    }
+
+    private void ResumeLeavingAfterHit()
+    {
+        if (agent != null && agent.isOnNavMesh && exitPoint != null)
+        {
+            agent.isStopped = false;
+            agent.SetDestination(exitPoint.position);
+        }
+    }
+
+    private void EnsureCombatHitbox()
+    {
+        if (combatHitbox == null) combatHitbox = GetComponent<CapsuleCollider>();
+        if (combatHitbox == null) combatHitbox = gameObject.AddComponent<CapsuleCollider>();
+
+        combatHitbox.isTrigger = true;
+        if (agent != null)
+        {
+            combatHitbox.radius = Mathf.Max(0.15f, agent.radius);
+            combatHitbox.height = Mathf.Max(combatHitbox.radius * 2f, agent.height);
+            combatHitbox.center = new Vector3(0f, agent.baseOffset + (combatHitbox.height * 0.5f), 0f);
         }
     }
 
@@ -506,71 +551,5 @@ public class CustomerOrder : NetworkBehaviour
         {
             Destroy(gameObject, 1f);
         }
-    }
-}
-
-/// <summary>Optional ragdoll controller for a customer prefab.</summary>
-public class CustomerRagdoll : MonoBehaviour
-{
-    [SerializeField] private Transform hipsBone;
-    [SerializeField] private Animator animator;
-    [SerializeField] private NavMeshAgent agent;
-    [SerializeField, Min(0.1f)] private float minimumDuration = 1.5f;
-
-    private Rigidbody[] _bodies;
-    private Collider[] _ragdollColliders;
-    private bool _isRagdolled;
-    public bool IsRagdolled => _isRagdolled;
-
-    private void Awake()
-    {
-        if (animator == null) animator = GetComponentInChildren<Animator>();
-        if (agent == null) agent = GetComponent<NavMeshAgent>();
-        if (hipsBone == null && animator != null && animator.isHuman)
-            hipsBone = animator.GetBoneTransform(HumanBodyBones.Hips);
-        _bodies = hipsBone != null ? hipsBone.GetComponentsInChildren<Rigidbody>(true) : System.Array.Empty<Rigidbody>();
-        _ragdollColliders = hipsBone != null ? hipsBone.GetComponentsInChildren<Collider>(true) : System.Array.Empty<Collider>();
-        SetRagdollState(false);
-    }
-
-    public void TriggerRagdoll(Vector3 force, float duration, System.Action onRecovered)
-    {
-        if (!_isRagdolled) StartCoroutine(RagdollRoutine(force, duration, onRecovered));
-    }
-
-    private System.Collections.IEnumerator RagdollRoutine(Vector3 force, float duration, System.Action onRecovered)
-    {
-        _isRagdolled = true;
-        bool hasRig = _bodies.Length > 0;
-        if (hasRig)
-        {
-            SetRagdollState(true);
-            foreach (Rigidbody body in _bodies)
-            {
-                body.linearVelocity = force * 0.35f;
-                body.AddForce(force + Vector3.up * 1.5f, ForceMode.Impulse);
-            }
-        }
-        else
-        {
-            if (agent != null) agent.isStopped = true;
-            if (animator != null) animator.enabled = false;
-        }
-
-        yield return new WaitForSeconds(Mathf.Max(minimumDuration, duration));
-        if (hasRig && hipsBone != null && Physics.Raycast(hipsBone.position + Vector3.up, Vector3.down, out RaycastHit hit, 3f))
-            transform.position = hit.point + Vector3.up * 0.05f;
-
-        SetRagdollState(false);
-        _isRagdolled = false;
-        onRecovered?.Invoke();
-    }
-
-    private void SetRagdollState(bool active)
-    {
-        if (agent != null) agent.enabled = !active;
-        if (animator != null) animator.enabled = !active;
-        foreach (Rigidbody body in _bodies) { body.isKinematic = !active; body.useGravity = active; }
-        foreach (Collider collider in _ragdollColliders) collider.enabled = active;
     }
 }

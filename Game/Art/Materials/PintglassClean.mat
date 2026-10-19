@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: PintglassClean
+  m_Shader: {fileID: 4800000, guid: 976e9e108f86d254ab72ba392ed8e52e, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _BottomFillHeight: 0.18
+    - _BottomPoolHeight: 0.15
+    - _CleanSmoothness: 1
+    - _DirtIntensity: 0.81
+    - _DirtRoughness: 0.08
+    - _Dirtiness: 0
+    - _DripTiling: 4
+    - _FoamLinesCount: 4
+    - _FresnelPower: 0.61
+    - _Glossiness: 27.9
+    - _IOR: 1.45
+    - _RimResidueHeight: 0.4
+    - _RimResidueWidth: 0.0723
+    - _RingFrequency: 5
+    - _RingSharpness: 8
+    - _Smoothness: 0.95
+    - _SmudgeScale: 8
+    - _SpecIntensity: 1.292
+    - _StainRoughness: 0.399
+    - _Tiling: 5
+    m_Colors:
+    - _BaseColor: {r: 0.85, g: 0.95, b: 1, a: 0.15}
+    - _DirtColor: {r: 0.41999996, g: 0.26999995, b: 0.079999976, a: 0.85}
+    - _FoamColor: {r: 0.88, g: 0.82, b: 0.68, a: 0.95}
+    - _FoamLineColor: {r: 0.9, g: 0.86, b: 0.72, a: 0.9}
+    - _FoamResidueColor: {r: 0.92, g: 0.88, b: 0.75, a: 0.95}
+    - _FresnelColor: {r: 0.95, g: 1, b: 1, a: 0.85}
+    - _GlassColor: {r: 0.82, g: 0.92, b: 0.95, a: 0.25}
+    - _GlassRimColor: {r: 1, g: 1, b: 1, a: 0.8}
+    - _StainColor: {r: 0.651314, g: 0.8207547, b: 0.38327694, a: 0.95}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
